@@ -1,0 +1,513 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: >
+
+    This SAM template creates an example Remediation Workflow Microservice for GuardDuty findings:
+
+      S3 Bucket: <S3 Bucket Name>
+
+Parameters:
+
+  ResourcePrefix:
+    Type: String
+    Default: guardduty-workflow
+    Description: Prefix for the resources that are created.
+
+  SlackChannel:
+    Type: String
+    Default: soc
+    Description: Slack channel for sending notifications.
+
+  SlackTokenName:
+    Type: String
+    Default: bot-token-guardduty
+    Description: Name of the Slack Token parameter. # This is the parameter name you stored in Parameter Store
+
+Resources:
+
+  # CloudWatch Event Rule and Associated IAM Role
+  StepFunctionEvent: 
+    Type: "AWS::Events::Rule"
+    Properties: 
+      Name: 
+        Fn::Join:
+        - '-'
+        - [!Ref ResourcePrefix, "trigger"]
+      Description: "Event Rule to trigger the GuardDuty remediation State Machine."
+      EventPattern: 
+        source: 
+        - aws.guardduty
+        detail-type:
+        - "GuardDuty Finding"
+      State: "ENABLED"
+      Targets: 
+      - 
+        Arn: !Ref StateMachine
+        Id: "TargetStateMachine"
+        RoleArn: !GetAtt [ CWStateExecutionRole, Arn ]
+
+  CWStateExecutionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal: 
+              Service:
+                - "events.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: GDCWStateExecutionPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "states:StartExecution"
+                Resource: !Ref StateMachine
+
+  # Event Publishing Lambda Functions
+  PublishEventLambda:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: 'detect.PublishEvent'
+      Role: !GetAtt [ PublishLambdaRole, Arn ]
+      Timeout: 60
+      CodeUri: ./
+      Runtime: python2.7
+      FunctionName: 
+        Fn::Join:
+          - '-'
+          - [!Ref ResourcePrefix, 'publish-event']
+      Environment:
+        Variables:
+          SLACK_CHANNEL: !Ref SlackChannel
+          SLACK_TOKEN_NAME: !Ref SlackTokenName
+
+  PublishRemediationLambda:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: 'detect.PublishRemediation'
+      Role: !GetAtt [ PublishLambdaRole, Arn ]
+      Timeout: 60
+      CodeUri: ./
+      Runtime: python2.7
+      FunctionName: 
+        Fn::Join:
+          - '-'
+          - [!Ref ResourcePrefix, 'publish-remediation']
+      Environment:
+        Variables:
+          SLACK_CHANNEL: !Ref SlackChannel
+          SLACK_TOKEN_NAME: !Ref SlackTokenName
+
+  PublishLambdaRole: 
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: '2012-10-17'
+        Statement: 
+          - Effect: Allow
+            Principal: 
+              Service: 
+                - lambda.amazonaws.com
+            Action: 
+            - sts:AssumeRole
+      Path: '/'
+      Policies: 
+        - 
+          PolicyName: GDPublishPolicy
+          PolicyDocument: 
+            Version: '2012-10-17'
+            Statement:
+              - 
+                Effect: Allow
+                Action:
+                  - logs:*
+                Resource: arn:aws:logs:*:*:*
+              - 
+                Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                  - ssm:DescribeParameters
+                Resource: '*'
+
+  # EC2 Remediation Lambda Function (MaliciousIPCaller)
+  RemediationEC2Lambda:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: 'remediation.EC2MaliciousIPCaller'
+      Role: !GetAtt [ RemediationEC2LambdaRole, Arn ]
+      Timeout: 60
+      CodeUri: ./
+      Runtime: python2.7
+      FunctionName:
+        Fn::Join:
+          - '-'
+          - [!Ref ResourcePrefix, 'ec2-malicious-ipcaller']
+
+  RemediationEC2LambdaRole: 
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: '2012-10-17'
+        Statement: 
+          - Effect: Allow
+            Principal: 
+              Service: 
+                - lambda.amazonaws.com
+            Action: 
+            - sts:AssumeRole
+      Path: '/'
+      Policies: 
+        - 
+          PolicyName: GDEC2Remediation
+          PolicyDocument: 
+            Version: '2012-10-17'
+            Statement:
+              - 
+                Effect: Allow
+                Action:
+                  - ssm:PutParameter
+                  - ec2:AuthorizeSecurityGroupEgress
+                  - ec2:AuthorizeSecurityGroupIngress
+                  - ec2:CreateSecurityGroup
+                  - ec2:DescribeSecurityGroups
+                  - ec2:RevokeSecurityGroupEgress
+                  - ec2:RevokeSecurityGroupIngress
+                  - ec2:UpdateSecurityGroupRuleDescriptionsEgress
+                  - ec2:UpdateSecurityGroupRuleDescriptionsIngress
+                  - ec2:DescribeInstances
+                  - ec2:UpdateSecurityGroupRuleDescriptionsIngress
+                  - ec2:DescribeVpcs
+                  - ec2:ModifyInstanceAttribute
+                  - lambda:InvokeFunction
+                  - cloudwatch:PutMetricData
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                Resource: '*'
+              - 
+                Effect: Allow
+                Action:
+                  - logs:*
+                Resource: arn:aws:logs:*:*:*
+
+  # EC2 Remediation Lambda Function (SSH BruteForce)
+
+  RemediationEC2BruteForceLambda:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: 'remediation.EC2BruteForce'
+      Role: !GetAtt [ RemediationEC2BruteForceLambdaRole, Arn ]
+      Timeout: 60
+      CodeUri: ./
+      Runtime: python2.7
+      FunctionName:
+        Fn::Join:
+          - '-'
+          - [!Ref ResourcePrefix, 'ec2-sshbruteforce']
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN: !Ref EC2BruteForceSNSTopic
+          SLACK_CHANNEL: !Ref SlackChannel
+          SLACK_TOKEN_NAME: !Ref SlackTokenName
+          RESOURCE_PREFIX: !Ref ResourcePrefix
+
+  RemediationEC2BruteForceLambdaRole: 
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: 2012-10-17
+        Statement: 
+          - 
+            Effect: Allow
+            Principal: 
+              Service: 
+                - lambda.amazonaws.com
+            Action: 
+              - sts:AssumeRole
+      Path: /
+      Policies: 
+        - 
+          PolicyName: GDEC2BruteForceRemediation
+          PolicyDocument: 
+            Version: 2012-10-17
+            Statement: 
+              - 
+                Effect: Allow
+                Action:
+                  - inspector:CreateAssessmentTemplate
+                  - inspector:CreateAssessmentTarget
+                  - inspector:CreateResourceGroup
+                  - inspector:ListRulesPackages
+                  - inspector:StartAssessmentRun
+                  - inspector:SubscribeToEvent
+                  - inspector:SetTagsForResource
+                  - inspector:DescribeAssessmentRuns
+                  - ec2:CreateTags
+                  - ec2:DescribeTags
+                Resource: '*'
+              - 
+                Effect: Allow
+                Action:
+                  - ssm:DescribeParameters
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                Resource: 
+                  Fn::Join:
+                  - ':'
+                  - ["arn:aws:ssm", !Ref "AWS::Region", !Ref "AWS::AccountId", "parameter/*"]
+              - 
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+
+  # EC2 Cleanup Lambda Function (SSH BruteForce)
+
+  CleanupEC2BruteForceLambda:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: 'remediation.EC2CleanupBruteForce'
+      Role: !GetAtt [ CleanupEC2BruteForceLambdaRole, Arn ]
+      Timeout: 60
+      CodeUri: ./
+      Runtime: python2.7
+      FunctionName:
+        Fn::Join:
+          - '-'
+          - [!Ref ResourcePrefix, 'ec2-sshbruteforce-cleanup']
+      Events:
+        MyTopic:
+          Type: SNS
+          Properties:
+             Topic: !Ref EC2BruteForceSNSTopic
+
+  CleanupEC2BruteForceLambdaRole: 
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: 2012-10-17
+        Statement: 
+          - 
+            Effect: Allow
+            Principal: 
+              Service: 
+                - lambda.amazonaws.com
+            Action: 
+              - sts:AssumeRole
+      Path: /
+      Policies: 
+        - 
+          PolicyName: GDEC2BruteForceCleanup
+          PolicyDocument: 
+            Version: 2012-10-17
+            Statement: 
+              - 
+                Effect: Allow
+                Action:
+                  - inspector:DeleteAssessmentTarget
+                  - inspector:DeleteAssessmentTemplate
+                  - inspector:DescribeAssessmentRuns
+                  - inspector:DescribeAssessmentTemplates
+                  - ec2:DeleteTags
+                Resource: '*'
+              - 
+                Effect: Allow
+                Action:
+                  - ssm:DescribeParameters
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                Resource: 
+                  Fn::Join:
+                  - ':'
+                  - ["arn:aws:ssm", !Ref "AWS::Region", !Ref "AWS::AccountId", "parameter/*"]
+                Resource: '*'
+              - 
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+
+  # Findings SNS Topic
+  EC2BruteForceSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName:
+        Fn::Join:
+          - '-'
+          - [!Ref ResourcePrefix, 'ec2-sshbruteforce-topic']
+
+  EC2SNSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      PolicyDocument:
+        Id: ID-GD-Topic-Policy
+        Version: '2012-10-17'
+        Statement:
+        - Sid: SID-GD-Example
+          Effect: Allow
+          Principal:
+            Service: inspector.amazonaws.com
+          Action: sns:Publish
+          Resource: !Ref EC2BruteForceSNSTopic
+      Topics: 
+      - !Ref EC2BruteForceSNSTopic
+
+  # IAM Remediation Lambda Functions
+
+  RemediationIAMLambda:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: 'remediation.InstanceCredentialExfiltration'
+      Role: !GetAtt [ RemediationICELambdaRole, Arn ]
+      Timeout: 60
+      CodeUri: ./
+      Runtime: python2.7
+      FunctionName: 
+        Fn::Join:
+          - '-'
+          - [!Ref ResourcePrefix, 'iam-instance-credential-exfil']
+
+  RemediationICELambdaRole: 
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: 2012-10-17
+        Statement: 
+          - 
+            Effect: Allow
+            Principal: 
+              Service: 
+                - lambda.amazonaws.com
+            Action: 
+              - sts:AssumeRole
+      Path: /
+      Policies: 
+        - 
+          PolicyName: GDICERemediation
+          PolicyDocument: 
+            Version: 2012-10-17
+            Statement: 
+              - 
+                Effect: Allow
+                Action:
+                  - iam:PutRolePolicy
+                Resource: '*'
+              - 
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+
+  StateExecutionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - !Sub states.${AWS::Region}.amazonaws.com
+            Action: "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: GDStateExecutionPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "lambda:InvokeFunction"
+                Resource: "*"
+
+  StateMachine:
+    Type: "AWS::StepFunctions::StateMachine"
+    Properties:
+      StateMachineName: !Ref ResourcePrefix
+      DefinitionString:
+        !Sub
+          - |-
+            {
+              "Comment": "A GuardDuty workflow microservice",
+              "StartAt": "PublishGuardDutyEvent",
+              "States": {
+                "PublishGuardDutyEvent": {
+                  "Type": "Task",
+                  "Resource": "${PublishEventArn}",
+                  "TimeoutSeconds": 60,
+                  "Next": "GuardDutyFindings"
+                },
+                "GuardDutyFindings": {
+                  "Type": "Choice",
+                  "Choices": [
+                    {
+                      "StringEquals": "UnauthorizedAccess:EC2/MaliciousIPCaller.Custom",
+                      "Variable": "$.detail.type",
+                      "Next": "EC2/MaliciousIPCaller.Custom"
+                    },
+                    {
+                      "StringEquals": "UnauthorizedAccess:EC2/SSHBruteForce",
+                      "Variable": "$.detail.type",
+                      "Next": "EC2/SSHBruteForce"
+                    },
+                    {
+                      "StringEquals": "UnauthorizedAccess:IAMUser/InstanceCredentialExfiltration",
+                      "Variable": "$.detail.type",
+                      "Next": "IAMUser/InstanceCredentialExfiltration"
+                    }
+                  ],
+                  "Default": "ManualRemediationRequired"
+                },
+                "EC2/MaliciousIPCaller.Custom": {
+                  "Type": "Task",
+                  "Resource": "${RemediationEC2}",
+                  "TimeoutSeconds": 60,
+                  "Next": "PublishGuardDutyRemediation"
+                },
+                "EC2/SSHBruteForce": {
+                  "Type": "Task",
+                  "Resource": "${RemediationEC2SSHBruteForce}",
+                  "TimeoutSeconds": 60,
+                  "Next": "PublishGuardDutyRemediation"
+                },
+                "IAMUser/InstanceCredentialExfiltration": {
+                  "Type": "Task",
+                  "Resource": "${RemediationIAM}",
+                  "TimeoutSeconds": 60,
+                  "Next": "PublishGuardDutyRemediation"
+                },
+                "PublishGuardDutyRemediation": {
+                  "Type": "Task",
+                  "Resource": "${PublishRemediationArn}",
+                  "TimeoutSeconds": 60,
+                  "End": true
+                },
+                "ManualRemediationRequired" : {
+                  "Type" : "Succeed",
+                  "OutputPath": "$"
+                }
+              }
+            }
+          - 
+            PublishEventArn: 
+              !GetAtt [ PublishEventLambda, Arn ]
+            PublishRemediationArn: 
+              !GetAtt [ PublishRemediationLambda, Arn ]
+            RemediationEC2: 
+              !GetAtt [ RemediationEC2Lambda, Arn ]
+            RemediationEC2SSHBruteForce: 
+              !GetAtt [ RemediationEC2BruteForceLambda, Arn ]
+            RemediationIAM: 
+              !GetAtt [ RemediationIAMLambda, Arn ]
+      RoleArn: !GetAtt [ StateExecutionRole, Arn ]
