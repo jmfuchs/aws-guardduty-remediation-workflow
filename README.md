@@ -1,4 +1,4 @@
-# Creating a GuardDuty Remediation Workflow with Step Functions
+# GuardDuty Remediation Workflow with Step Functions
 
 This serverless application...
 
@@ -26,8 +26,8 @@ pip install -r requirements.txt -t ./
 prefix=
 ```
 
+## Create S3 Bucket
 ## Create Slack Bot
-
 ## Create Parameter
 ## Create Inspector Role
 
