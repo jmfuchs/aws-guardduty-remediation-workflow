@@ -26,14 +26,13 @@ pip install -r requirements.txt -t ./
 prefix=
 ```
 
-## Create S3 Bucket
-## Create Slack Bot
-## Create Parameter
-## Create Inspector Role
+## Setup Environment
+
+### Create S3 Bucket
+### Create Slack Bot
+### Create Parameter
+### Create Inspector Role
 
 ## Deploy
 
-
-
-## Access
 
