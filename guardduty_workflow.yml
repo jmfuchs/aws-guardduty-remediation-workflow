@@ -148,6 +148,10 @@ Resources:
         Fn::Join:
           - '-'
           - [!Ref ResourcePrefix, 'ec2-malicious-ipcaller']
+      Environment:
+        Variables:
+          SLACK_CHANNEL: !Ref SlackChannel
+          SLACK_TOKEN_NAME: !Ref SlackTokenName
 
   RemediationEC2LambdaRole: 
     Type: AWS::IAM::Role
@@ -282,6 +286,10 @@ Resources:
         Fn::Join:
           - '-'
           - [!Ref ResourcePrefix, 'ec2-sshbruteforce-cleanup']
+      Environment:
+        Variables:
+          SLACK_CHANNEL: !Ref SlackChannel
+          SLACK_TOKEN_NAME: !Ref SlackTokenName
       Events:
         MyTopic:
           Type: SNS
@@ -375,6 +383,10 @@ Resources:
         Fn::Join:
           - '-'
           - [!Ref ResourcePrefix, 'iam-instance-credential-exfil']
+      Environment:
+        Variables:
+          SLACK_CHANNEL: !Ref SlackChannel
+          SLACK_TOKEN_NAME: !Ref SlackTokenName
 
   RemediationICELambdaRole: 
     Type: AWS::IAM::Role
