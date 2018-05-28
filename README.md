@@ -50,7 +50,7 @@ For this application you need to manually create a Parameter in AWS Systems Mana
 aws ssm put-parameter --name "<INSERT NAME>" --type "SecureString" --value "<INSERT SLACK TOKEN>"
 ```
 
->	To quickly get start use **bot-token-guardduty** which is the default name when deploying the application.
+>	To quickly get started use **bot-token-guardduty** for the parameter name which is the default name when deploying the application.
 ### Create Inspector Role
 
 ### Create Slack Bot
