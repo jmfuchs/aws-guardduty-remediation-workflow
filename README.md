@@ -24,7 +24,7 @@ If you have trouble installing any of the prerequisites or dependencies, you can
 
 ## Install Dependencies
 
-After cloning the repo, change to the aws-ct-processing directory and run the following to install the dependencies:
+After cloning the repo, change to the aws-guardduty-remediation-workflow and run the following to install the dependencies:
 
 ```
 pip install -r requirements.txt -t ./
@@ -34,7 +34,13 @@ pip install -r requirements.txt -t ./
 
 Before you deploy the SAM template for your serverless application you need to setup a number of resources manually.
 
-### Create a Slack Bot
+### Slack
+
+#### Create Slack Channel
+
+Create a new channel for receiving alerts.
+
+#### Create Slack Bot
 
 Go to your Slack client:
 
@@ -43,8 +49,8 @@ Go to your Slack client:
 3. In the left navigation click **Custom Integrations** and click **Bots**.
 4. Click **Add Configuration**
 5. Type **guardduty** for the Username and click **Add Bot Integration**.
-6. Securely copy the API Token.  You'll be adding this to paramter store later on.
-7. Customize Name and Icon as you see fit and click **Save Integration**.
+6. Securely copy the API Token.  You'll be adding this to parameter store later on.
+7. Customize the Name and Icon as you see fit and click **Save Integration**.
 
 ### AWS Resources
 
