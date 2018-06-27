@@ -90,7 +90,11 @@ aws cloudformation deploy --template-file guardduty_workflow_output.yml --stack-
 
 ## View your GuardDuty Remediation State Machine
 
-Browse to [AWS Step Functions](https://us-west-2.console.aws.amazon.com/states/home)
+1. Browse to the [AWS Step Functions](https://us-west-2.console.aws.amazon.com/states/home)
+2. Click **State Machines** in the left navigation and click on **guardduty-workflow**.
+3. Click **Definition** to view the JSON structure and visual representation of the workflow.
+
+Below are additional details about the Lambda functions included in the State Machine.
 
 ### State Machine Workflow Details
 
