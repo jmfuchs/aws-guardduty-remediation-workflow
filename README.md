@@ -4,6 +4,8 @@ This serverless application...
 
 ## Architecture
 
+![Log-Architecture](images/aws-gd-remediation-arch.png)
+
 ## Prerequisites
 
 Below are the necessary prerequisites:
