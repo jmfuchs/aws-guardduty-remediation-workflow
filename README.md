@@ -12,6 +12,11 @@ Below are the necessary prerequisites:
 
 *	[AWS Account](https://aws.amazon.com/premiumsupport/knowledge-center/create-and-activate-aws-account/)
 *	[AWS CLI](https://aws.amazon.com/cli/)
+*	[pip](https://pypi.org/project/pip/)
+
+### Cloud9 Environment
+
+If you have trouble installing any of the prerequisites or dependencies, you can spin up an [AWS Cloud9](https://aws.amazon.com/cloud9/) environment, which is a cloud-based IDE that comes prepackaged with a number of essential packages.
 
 ## Install Dependencies
 
@@ -19,13 +24,6 @@ After cloning the repo, change to the aws-ct-processing directory and run the fo
 
 ```
 pip install -r requirements.txt -t ./
-```
-
-> If you are using Mac OS X and installed Python using Homebrew, you'll need to add a setup.cfg in the aws-ct-processing directory with the following:
-
-```
-[install]
-prefix=
 ```
 
 ## Setup Environment
