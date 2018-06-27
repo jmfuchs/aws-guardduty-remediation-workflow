@@ -4,7 +4,11 @@ This serverless application...
 
 ## Architecture
 
-![Architecture](images/aws-remediation-arch.png)
+![Architecture](images/aws-gd-remediation-arch.png)
+
+### State Machine Workflow Details
+
+![Architecture](images/workflow.png)
 
 ## Prerequisites
 
