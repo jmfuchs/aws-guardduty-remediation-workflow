@@ -6,10 +6,6 @@ This serverless application creates an [AWS Step Functions](https://aws.amazon.c
 
 ![Architecture](images/aws-gd-remediation-arch.png)
 
-### State Machine Workflow Details
-
-![Architecture](images/workflow.png)
-
 ## Prerequisites
 
 Below are the necessary prerequisites:
@@ -36,10 +32,6 @@ Before you deploy the SAM template for your serverless application you need to s
 
 ### Slack
 
-#### Create Slack Channel
-
-Create a new channel for receiving alerts.
-
 #### Create Slack Bot
 
 Go to your Slack client:
@@ -51,6 +43,10 @@ Go to your Slack client:
 5. Type **guardduty** for the Username and click **Add Bot Integration**.
 6. Securely copy the API Token.  You'll be adding this to parameter store later on.
 7. Customize the Name and Icon as you see fit and click **Save Integration**.
+
+#### Create Slack Channel
+
+Create a new channel for receiving alerts. Invite your bot by typing **@guardduty** in the channel and clicking **invite them to join**.
 
 ### AWS Resources
 
@@ -89,5 +85,13 @@ aws cloudformation package --template-file guardduty_workflow.yml --s3-bucket <B
 Deploy the CloudFormation template.
 
 ```
-aws cloudformation deploy --template-file guardduty_workflow_output.yml --stack-name sam-gd-remediation-workflow --parameter-overrides SlackChannel=<CHANNEL> --capabilities CAPABILITY_NAMED_IAM
+aws cloudformation deploy --template-file guardduty_workflow_output.yml --stack-name sam-gd-remediation-workflow --parameter-overrides SlackChannel=<CHANNEL> SlackTokenName=bot-token-guardduty --capabilities CAPABILITY_NAMED_IAM
 ```
+
+## View your GuardDuty Remediation State Machine
+
+Browse to [AWS Step Functions](https://us-west-2.console.aws.amazon.com/states/home)
+
+### State Machine Workflow Details
+
+![Architecture](images/workflow.png)
