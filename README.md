@@ -1,6 +1,6 @@
 # GuardDuty Remediation Workflow with Step Functions
 
-This serverless application...
+This serverless application creates an [AWS Step Functions](https://aws.amazon.com/step-functions/) state machine that uses AWS Lambda functions to publish alerts and remediate [Amazon GuardDuty](https://aws.amazon.com/guardduty/) findings. The below architecture showcases how a finding is processed through the workflow.
 
 ## Architecture
 
@@ -83,7 +83,7 @@ aws cloudformation package \
     --output-template-file guardduty_workflow_output.yml
 ```
 
-Deploy
+Deploy the CloudFormation template.
 
 ```
 aws cloudformation deploy \

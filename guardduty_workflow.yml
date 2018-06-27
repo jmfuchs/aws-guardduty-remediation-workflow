@@ -4,8 +4,6 @@ Description: >
 
     This SAM template creates an example Remediation Workflow Microservice for GuardDuty findings:
 
-      S3 Bucket: <S3 Bucket Name>
-
 Parameters:
 
   ResourcePrefix:
