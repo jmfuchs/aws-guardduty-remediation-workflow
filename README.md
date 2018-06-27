@@ -36,6 +36,16 @@ Before you deploy the SAM template for your serverless application you need to s
 
 ### Create a Slack Bot
 
+Go to your Slack client:
+
+1. Click the top left corner drop down.
+2. Under **Administration** click **Manage Apps**.
+3. In the left navigation click **Custom Integrations** and click **Bots**.
+4. Click **Add Configuration**
+5. Type **guardduty** for the Username and click **Add Bot Integration**.
+6. Securely copy the API Token.  You'll be adding this to paramter store later on.
+7. Customize Name and Icon as you see fit and click **Save Integration**.
+
 ### AWS Resources
 
 #### Create an S3 Bucket
@@ -51,14 +61,33 @@ aws s3api create-bucket --bucket <BUCKET NAME> --region <REGION>
 For this application you need to manually create a Parameter in AWS Systems Manager Parameter Store for your Slack Bot Token.
 
 ```
-aws ssm put-parameter --name "<INSERT NAME>" --type "SecureString" --value "<INSERT SLACK TOKEN>"
+aws ssm put-parameter --name "bot-token-guardduty" --type "SecureString" --value "<INSERT SLACK API TOKEN>"
 ```
 
->	To quickly get started use **bot-token-guardduty** for the parameter name which is the default name when deploying the application.
 ### Create Inspector Role
 
-### Create Slack Bot
+If you haven't used Amazon Inspector before you'll need to create an IAM Service-Linked Role.
 
-## Deploy
+1. Browse to [IAM Console](https://console.aws.amazon.com/iam/home#/home) and click **Roles** in the left navigation.
+2. Click **Create Role** and select **Inspector** for the service that will be using the Role.
+3. Click **Next: Permissions**, **Next: Review**, and then **Create Role**.
 
+## Package and Deploy the SAM template
 
+Package local artifacts and upload to the S3 bucket you previously created.
+
+```
+aws cloudformation package \
+    --template-file guardduty_workflow.yml \
+    --s3-bucket <BUCKET NAME> \
+    --output-template-file guardduty_workflow_output.yml
+```
+
+Deploy
+
+```
+aws cloudformation deploy \
+    --template-file guardduty_workflow_output.yml \
+    --stack-name sam-gd-remediation-workflow \
+    --capabilities CAPABILITY_NAMED_IAM
+```
