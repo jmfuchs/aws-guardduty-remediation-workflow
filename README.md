@@ -59,7 +59,7 @@ Go to your Slack client:
 In order to package and deploy SAM templates you need to have an S3 bucket where you can upload your artifacts.  If you don't already have a bucket you plan on using you can run the command below to create one.
 
 ```
-aws s3api create-bucket --bucket <BUCKET NAME> --region <REGION>
+aws s3api create-bucket --bucket <BUCKET NAME> --region <REGION> --create-bucket-configuration LocationConstraint=<REGION>
 ```
 
 ### Create Parameter
@@ -83,17 +83,11 @@ If you haven't used Amazon Inspector before you'll need to create an IAM Service
 Package local artifacts and upload to the S3 bucket you previously created.
 
 ```
-aws cloudformation package \
-    --template-file guardduty_workflow.yml \
-    --s3-bucket <BUCKET NAME> \
-    --output-template-file guardduty_workflow_output.yml
+aws cloudformation package --template-file guardduty_workflow.yml --s3-bucket <BUCKET NAME> --output-template-file guardduty_workflow_output.yml
 ```
 
 Deploy the CloudFormation template.
 
 ```
-aws cloudformation deploy \
-    --template-file guardduty_workflow_output.yml \
-    --stack-name sam-gd-remediation-workflow \
-    --capabilities CAPABILITY_NAMED_IAM
+aws cloudformation deploy --template-file guardduty_workflow_output.yml --stack-name sam-gd-remediation-workflow --parameter-overrides SlackChannel=<CHANNEL> --capabilities CAPABILITY_NAMED_IAM
 ```
