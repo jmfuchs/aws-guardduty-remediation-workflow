@@ -4,7 +4,7 @@ This serverless application...
 
 ## Architecture
 
-![Log-Architecture](images/aws-gd-remediation-arch.png)
+![Architecture](images/aws-remediation-arch.png)
 
 ## Prerequisites
 
